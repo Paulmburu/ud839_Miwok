@@ -45,7 +45,7 @@ public class FamilyActivity extends AppCompatActivity {
         for(int i=0;i<words.size();i++)
             Log.v("NumberActivity","word at index "+i+" "+words.get(i));
 
-        WordAdapter adapter = new WordAdapter(this, words);
+        WordAdapter adapter = new WordAdapter(this, words,R.color.category_family);
         ListView listView=(ListView)findViewById(R.id.list);
         listView.setAdapter(adapter);
     }
