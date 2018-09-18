@@ -118,9 +118,8 @@ public class NumbersActivity extends AppCompatActivity {
                         // Request permanent focus.
                         AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
 
-                if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                    mAudioManager.registerMediaButtonEventReceiver(RemoteControlReciever);
-                    // Start playback
+                if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED){
+                    // we have audio focus now
 
                     // create and setup the {@link MediaPlayer} for the audio resource associated
                     // with the current word.
@@ -131,6 +130,10 @@ public class NumbersActivity extends AppCompatActivity {
                     // Setup a listener  on th media player, so that we can stop and release
                     // media player once the sound has finished playing.
                     mMediaPlayer.setOnCompletionListener(mCompletionListener);
+
+                // Regardless of whether or not we were granted audio focus, abandon it. This also
+                // unregisters the AudioFocusChangeListener so we don't get anymore callbacks.
+                mAudioManager.abandonAudioFocus(mOnAudioFocusChangeListener);
                 }
 
             }
