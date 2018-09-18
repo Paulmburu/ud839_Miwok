@@ -15,6 +15,7 @@
  */
 package com.example.android.miwok;
 
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -28,7 +29,41 @@ import java.util.ArrayList;
 
 public class NumbersActivity extends AppCompatActivity {
 
+    /* Handles play back of audio files */
     private MediaPlayer mMediaPlayer;
+
+    /** Handles audio focus when playing an audio file */
+    private AudioManager mAudioManager;
+
+    /**
+     * This listener gets triggered whenever the audio focus changes
+     * (i.e., we gain or lose audio focus because of another app or device).
+     */
+    private AudioManager.OnAudioFocusChangeListener mOnAudioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
+        @Override
+        public void onAudioFocusChange(int focusChange) {
+            if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT ||
+                    focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
+                // The AUDIOFOCUS_LOSS_TRANSIENT case means that we've lost audio focus for a
+                // short amount of time. The AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK case means that
+                // our app is allowed to continue playing sound but at a lower volume. We'll treat
+                // both cases the same way because our app is playing short sound files.
+
+                // Pause playback and reset player to the start of the file. That way, we can
+                // play the word from the beginning when we resume playback.
+                mMediaPlayer.pause();
+                mMediaPlayer.seekTo(0);
+            } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
+                // The AUDIOFOCUS_GAIN case means we have regained focus and can resume playback.
+                mMediaPlayer.start();
+            } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
+                // The AUDIOFOCUS_LOSS case means we've lost audio focus and
+                // Stop playback and clean up resources
+                releaseMediaPlayer();
+            }
+        }
+    };
+
 
     /**
      * This listener gets triggered when the {@link MediaPlayer} has completed
@@ -37,7 +72,7 @@ public class NumbersActivity extends AppCompatActivity {
     private MediaPlayer.OnCompletionListener mCompletionListener = new MediaPlayer.OnCompletionListener() {
         @Override
         public void onCompletion(MediaPlayer mp) {
-            releasedMedaPlayer();
+            releaseMediaPlayer();
         }
     };
 
@@ -45,6 +80,8 @@ public class NumbersActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.word_list);
+
+        // Create and setup {@linl AudioManager} to request audio focus
 
         final ArrayList<Word> words=new ArrayList<Word>();
         words.add(new Word("one","lutti",R.drawable.number_one,R.raw.number_one));
@@ -72,17 +109,30 @@ public class NumbersActivity extends AppCompatActivity {
 
                 // release the media player if it currently exists because we are about to
                 // play a different sound file.
-                releasedMedaPlayer();
+                releaseMediaPlayer();
 
-                // create and setup the {@link MediaPlayer} for the audio resource associated
-                // with the current word.
-                mMediaPlayer=MediaPlayer.create(NumbersActivity.this,word.getAudioResourceId());
-                // start the audio file
-                mMediaPlayer.start();
+                // Request audio focus for playback
+                int result = mAudioManager.requestAudioFocus(mOnAudioFocusChangeListener,
+                        // Use the music stream.
+                        AudioManager.STREAM_MUSIC,
+                        // Request permanent focus.
+                        AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
 
-                // Setup a listener  on th media player, so that we can stop and release
-                // media player once the sound has finished playing.
-                mMediaPlayer.setOnCompletionListener(mCompletionListener);
+                if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                    mAudioManager.registerMediaButtonEventReceiver(RemoteControlReciever);
+                    // Start playback
+
+                    // create and setup the {@link MediaPlayer} for the audio resource associated
+                    // with the current word.
+                    mMediaPlayer=MediaPlayer.create(NumbersActivity.this,word.getAudioResourceId());
+                    // start the audio file
+                    mMediaPlayer.start();
+
+                    // Setup a listener  on th media player, so that we can stop and release
+                    // media player once the sound has finished playing.
+                    mMediaPlayer.setOnCompletionListener(mCompletionListener);
+                }
+
             }
         });
 
@@ -93,13 +143,13 @@ public class NumbersActivity extends AppCompatActivity {
         super.onStop();
         // When the activity is stopped, release the media player resource's we won't be playing
         // any more sounds.
-        releasedMedaPlayer();
+        releaseMediaPlayer();
     }
 
     /*
             * Clean up the media player by releasing its resources
             */
-    private void releasedMedaPlayer(){
+    private void releaseMediaPlayer(){
         // if the media player is not null it may be currently playing a song
         if(mMediaPlayer!=null){
             // Regardless of the current state of the media player release its resources
