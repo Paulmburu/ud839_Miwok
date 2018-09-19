@@ -25,6 +25,8 @@ import android.widget.ListView;
 
 import java.util.ArrayList;
 
+
+/**Not displaying correctly*/
 public class PhrasesActivity extends AppCompatActivity {
 
     private MediaPlayer mMediaPlayer;
